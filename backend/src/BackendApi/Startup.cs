@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -9,8 +6,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BackendApi
 {
@@ -27,12 +26,7 @@ namespace BackendApi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR();
-            services.AddControllers();
             services.AddMediatR(typeof(Startup));
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "BackendApi", Version = "v1" });
-            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -44,8 +38,6 @@ namespace BackendApi
             }
 
             app.UseSerilogRequestLogging();
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "BackendApi v1"));
 
             app.UseHttpsRedirection();
 
@@ -55,7 +47,6 @@ namespace BackendApi
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
                 endpoints.MapHub<NotificationHub>("/notifications");
             });
 
@@ -94,7 +85,7 @@ namespace BackendApi
         {
             _logger.LogInformation(nameof(NotificationHub));
             _logger.LogInformation(nameof(SendPingNotificationAsync));
-           
+
             return _mediator.Publish(new PingNotification(Context.ConnectionId, data));
         }
     }
@@ -153,7 +144,7 @@ namespace BackendApi
         }
 
     }
-    
+
     public class PongNotification : INotification
     {
         public string ConnectionId { get; }
