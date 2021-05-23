@@ -26,7 +26,6 @@ namespace BackendApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //services.AddTransient<ChatService>();
             services.AddSignalR();
             services.AddControllers();
             services.AddMediatR(typeof(Startup));
@@ -72,7 +71,13 @@ namespace BackendApi
         }
     }
 
-    public class NotificationHub : Hub
+    public interface INotificationHubClient
+    {
+        Task SendPongNotificationAsync(PongNotification notification);
+        Task SendPingNotificationAsync(string data);
+    }
+
+    public class NotificationHub : Hub<INotificationHubClient>
     {
         private readonly IMediator _mediator;
         private readonly ILogger<NotificationHub> _logger;
@@ -85,10 +90,11 @@ namespace BackendApi
             _logger = logger;
         }
 
-        public Task SendPingNotification(string data)
+        public Task SendPingNotificationAsync(string data)
         {
             _logger.LogInformation(nameof(NotificationHub));
-            _logger.LogInformation(nameof(SendPingNotification));
+            _logger.LogInformation(nameof(SendPingNotificationAsync));
+           
             return _mediator.Publish(new PingNotification(Context.ConnectionId, data));
         }
     }
@@ -105,16 +111,13 @@ namespace BackendApi
     }
     public class PingNotificationHandler : INotificationHandler<PingNotification>
     {
-        private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMediator _mediator;
         private readonly ILogger<PingNotificationHandler> _logger;
 
         public PingNotificationHandler(
-            IHubContext<NotificationHub> hubContext,
             IMediator mediator,
             ILogger<PingNotificationHandler> logger)
         {
-            _hubContext = hubContext;
             _mediator = mediator;
             _logger = logger;
         }
@@ -124,22 +127,19 @@ namespace BackendApi
             _logger.LogInformation(nameof(PingNotificationHandler));
             _logger.LogInformation(nameof(Handle));
             _logger.LogInformation(JsonSerializer.Serialize(notification));
-            return _mediator.Publish(new PongNotification(notification.ConnectionId, notification.Data));
+            return _mediator.Publish(new PongNotification(notification.ConnectionId, notification.Data), cancellationToken);
         }
     }
     public class PongNotificationHandler : INotificationHandler<PongNotification>
     {
-        private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly IMediator _mediator;
+        private readonly IHubContext<NotificationHub, INotificationHubClient> _hubContext;
         private readonly ILogger<PongNotificationHandler> _logger;
 
         public PongNotificationHandler(
-            IHubContext<NotificationHub> hubContext,
-            IMediator mediator,
+            IHubContext<NotificationHub, INotificationHubClient> hubContext,
             ILogger<PongNotificationHandler> logger)
         {
             _hubContext = hubContext;
-            _mediator = mediator;
             _logger = logger;
         }
 
@@ -148,8 +148,8 @@ namespace BackendApi
             _logger.LogInformation(nameof(PongNotificationHandler));
             _logger.LogInformation(nameof(Handle));
             _logger.LogInformation(JsonSerializer.Serialize(notification));
-            var c = _hubContext.Clients.Clients(notification.ConnectionId);
-            return c.SendAsync("SendPongNotification", notification.Data);
+            _logger.LogInformation("sending typed client {notificationConnectionId}", notification.ConnectionId);
+            return _hubContext.Clients.Clients(notification.ConnectionId).SendPongNotificationAsync(notification);
         }
 
     }

@@ -17,18 +17,19 @@ export class SignalRService {
       .then(() => 
       {
         console.log('Connection started');
-        console.log("Invoke SendPingNotification sending: Frontend send message", this.counter)
-        this.hubConnection.invoke('SendPingNotification', '1 Frontend send message');
+        console.log("Invoke SendPingNotificationAsync", this.counter)
+        this.hubConnection.invoke('SendPingNotificationAsync', '1 Frontend send message');
       })
       .catch(err => console.log('Error while starting connection: ' + err))
   }
   public registerOnServerEvents(){
     this.hubConnection.on(
-      'SendPongNotification',
+      'SendPongNotificationAsync',
       (data: any) => {
-          console.log('Listening SendPongNotification - received', data, ++this.counter);
+          console.log('Listening SendPongNotificationAsync - received', data, ++this.counter);
           setTimeout(() =>{
-            this.hubConnection.invoke('SendPingNotification',  this.counter + ' Frontend send message');
+            console.log("Invoke SendPingNotificationAsync", this.counter)
+            this.hubConnection.invoke('SendPingNotificationAsync',  this.counter + ' Frontend send message');
           }, 1000);          
       });
   }
