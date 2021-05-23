@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { SignalRService } from './services/signal-r.service';
 
 @Component({
   selector: 'app-root',
@@ -8,4 +9,11 @@ import { Component } from '@angular/core';
   styles: []
 })
 export class AppComponent {
+ 
+   constructor(public signalRService: SignalRService) { }
+
+   ngOnInit() {
+     this.signalRService.startConnection();
+     this.signalRService.registerOnServerEvents();
+   }
 }
