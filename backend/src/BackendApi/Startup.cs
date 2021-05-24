@@ -1,3 +1,4 @@
+using System;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -26,7 +27,11 @@ namespace BackendApi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton<IRoverService, RoverService>();
-            services.AddSignalR();
+            services.AddSignalR(hubOptions =>
+            {
+                hubOptions.EnableDetailedErrors = true;
+            }).AddNewtonsoftJsonProtocol();
+            //.AddMessagePackProtocol();
             services.AddMediatR(typeof(Startup));
         }
 
@@ -62,11 +67,17 @@ namespace BackendApi
             });
         }
     }
-    
+
 
     public class RoverState
     {
-        public string Name = "Foo";
+        public string Name { get; set; } = "Foo";
+
+        public bool[] Bools { get; set; } = { true, false };
+        //public bool[,] Bools2D { get; set; } = new bool[,] { { true, false }, { true, true } };
+        public bool[,] Bools2Db { get; set; } = new bool[2,2] { { true, false }, { true, true } };
+        //public bool?[] NullableBools { get; set; } = { true, null, false };
+        public bool?[,] NullableBools2D { get; set; } = new bool?[,] { { true, false }, { true, null } };
         //public bool?[,] Map { get; private set; } = new bool?[3, 3];
         //public RoverState()
         //{
@@ -93,7 +104,7 @@ namespace BackendApi
     public interface IPushNotificationHubClient
     {
         Task SendPongNotificationAsync(PongNotification notification);
-        Task RoverLandResponseAsync(string state);
+        Task RoverLandResponseAsync(RoverState state);
     }
 
     public interface IInvokeNotificationHubClient
@@ -159,7 +170,7 @@ namespace BackendApi
             _logger.LogInformation("RoverLandRequestNotificationHandler - {notificationConnectionId}", notification.ConnectionId);
             return _roverService.LandAsync().ContinueWith(x =>
             {
-                _logger.LogInformation("LandAsync - "+  x.Result.Name);
+                _logger.LogInformation("LandAsync - " + x.Result.Name);
                 _mediator.Publish(new RoverLandResponse(notification.ConnectionId, x.Result), cancellationToken);
             }, cancellationToken);
         }
@@ -180,7 +191,10 @@ namespace BackendApi
         public Task Handle(RoverLandResponse notification, CancellationToken cancellationToken)
         {
             _logger.LogInformation("RoverLandResponseNotificationHandler - {notificationConnectionId}", notification.ConnectionId);
-            return _hubContext.Clients.Clients(notification.ConnectionId).RoverLandResponseAsync(notification.State.Name);
+            //_logger.LogInformation("RoverLandResponseNotificationHandler - json: " + JsonSerializer.Serialize(notification.State));
+            //_logger.LogInformation("RoverLandResponseNotificationHandler - name: " + notification.State.Name);
+            return _hubContext.Clients.Clients(notification.ConnectionId).RoverLandResponseAsync(notification.State);
+            //return _hubContext.Clients.Clients(notification.ConnectionId).SendAsync("RoverLandResponseAsync", notification.State, cancellationToken);
         }
     }
     public class RoverLandResponse : INotification
